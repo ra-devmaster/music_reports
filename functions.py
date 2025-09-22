@@ -12,15 +12,15 @@ load_dotenv()
 API_BASE_URL = os.environ['BASE_URL']
 HEADERS = {"API-key": os.environ['API_KEY']}
 
-def generate_attachments(report, songs, start_dt, end_dt):
+def generate_attachments(job, songs, start_dt, end_dt):
     attachments = []
-    market_name = get_market_name(report.market_id, report.market_type).replace(' ', '_')
+    market_name = job.market_name.replace(' ', '_')
     loc = os.path.dirname(os.path.abspath(__file__))
     file_name = f'{loc}/attachments/{market_name}_({start_dt})_to_({end_dt})'
     song_df = pd.DataFrame.from_dict(songs)
     song_df.to_csv(file_name + '.csv', header=True, index=False)
     attachments.append(file_name + '.csv')
-    attachments.append(make_excel_nice(song_df, file_name, id))
+    attachments.append(make_excel_nice(song_df, file_name, 'Music report'))
     html_file = open(file_name + '.html', 'w', encoding='utf-8')
     song_df.to_html(buf=html_file, classes='table table-stripped', index=False, justify='left')
     html_file.close()
@@ -28,12 +28,11 @@ def generate_attachments(report, songs, start_dt, end_dt):
     return attachments
 
 
-def make_excel_nice(song_table, file_name, id):
-    id = str(id)
+def make_excel_nice(song_table, file_name, market_name):
     attachment = file_name + '.xlsx'
     writer = pd.ExcelWriter(attachment, engine='xlsxwriter')
-    song_table.to_excel(writer, sheet_name=id, index=False)
-    worksheet = writer.sheets[id]
+    song_table.to_excel(writer, sheet_name=market_name, index=False)
+    worksheet = writer.sheets[market_name]
     (max_row, max_col) = song_table.shape
     # Make the columns wider for clarity.
     worksheet.set_column(0, max_col - 1, 12)
@@ -44,51 +43,50 @@ def make_excel_nice(song_table, file_name, id):
     return attachment
 
 
-def create_email(report, song_dict, start_dt, end_dt, daypart_name):
+def create_email(job, song_dict, start_dt, end_dt, daypart_name):
 
     day_names = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
     days_str = ''
-    if len(report.days) == 7:
+    if len(job.days) == 7:
         days_str = 'all days'
-    elif report.days == [0,1,2,3,4]:
+    elif job.days == [0,1,2,3,4]:
         days_str = 'weekdays'
-    elif report.days == [5,6]:
+    elif job.days == [5,6]:
         days_str = 'weekends'
     else:
-        for d in report.days:
+        for d in job.days:
             days_str+=f'{day_names[d]}, '
         days_str = days_str[:-2]
 
-    greeting_name = get_greeting_name(report.user_id)
-    market_name = get_market_name(report.market_id, report.market_type)
+    greeting_name = get_greeting_name(job.user_id)
 
-    email = {'subject': f'Market report for {market_name} from RadioAnalyzer', 'body': f'Hi {greeting_name},<br><br>'}
+    email = {'subject': f'Market report for {job.market_name} from RadioAnalyzer', 'body': f'Hi {greeting_name},<br><br>'}
 
-    if not report.new:
-        if not report.limit:
+    if not job.new:
+        if not job.limit:
             market_type_name = 'all songs'
         else:
-            market_type_name = f'top {report.limit} songs'
+            market_type_name = f'top {job.limit} songs'
     else:
         market_type_name = 'new songs'
 
-    if report.min_spins > 0 and report.max_spins > 0:
-        spins_text = f'between {report.min_spins} and {report.max_spins} time(s) '
-    elif report.min_spins > 0 and report.max_spins == 0:
-        spins_text = f'more then {report.min_spins} time(s) '
-    elif report.min_spins == 0 and report.max_spins > 0:
-        spins_text = f'under {report.max_spins} time(s) '
+    if job.min_spins > 0 and job.max_spins > 0:
+        spins_text = f'between {job.min_spins} and {job.max_spins} time(s) '
+    elif job.min_spins > 0 and job.max_spins == 0:
+        spins_text = f'more then {job.min_spins} time(s) '
+    elif job.min_spins == 0 and job.max_spins > 0:
+        spins_text = f'under {job.max_spins} time(s) '
     else:
         spins_text = 'at least 1 time(s) '
 
     email['body'] += 'There were no results for ' if len(song_dict) < 1 else 'Here is your '
-    email['body'] += f'{market_type_name} for {report.weeks_to_check} {"week" if report.weeks_to_check == 1 else "weeks"} of data on {market_name}.<br>'
+    email['body'] += f'{market_type_name} for {job.weeks_to_check} {"week" if job.weeks_to_check == 1 else "weeks"} of data on {job.market_name}.<br>'
     email['body'] += f'Containing songs played {spins_text}'
     email['body'] += f'between {start_dt} and {end_dt} for '
     if daypart_name:
         email['body'] += f'{daypart_name}. '
     else:
-        email['body'] += f'{days_str} from hour {report.start_time} to hour {report.end_time}. '
+        email['body'] += f'{days_str} from hour {job.start_time} to hour {job.end_time}. '
 
     email['body'] += '<br><br>Have a question about this or any other report? Reach out to us at support@radioanalyzer.com'
     email['body'] += '<br>Your RadioAnalyzer Team<br>'
@@ -96,16 +94,16 @@ def create_email(report, song_dict, start_dt, end_dt, daypart_name):
     return email
 
 
-def get_song_list(report):
-    start_time =  "{:0>8}".format(str(report.start_time))
-    end_time = "{:0>8}".format(str(report.end_time))
-    api_url = (f'{API_BASE_URL}/charts/{"radio" if report.market_type.value == 0 else "market"}/songs/{"new/" if report.new else ""}?id='
-                         f'{report.market_id}'
-               f'{"" if report.market_type.value == 0 else f"&market_type={report.market_type.name.lower()}"}&start_dt={report.start_dt}&end_dt={report.end_dt}&min_spins'
-               f'={report.min_spins}&max_spins'
-               f'={report.max_spins}&start_time={start_time}'
-                         f'&end_time={end_time}{'&limit=' + report.limit if report.limit else ''}&user_id={report.user_id}')
-    resp = requests.post(api_url, headers=HEADERS, json=report.days)
+def get_song_list(job):
+    start_time =  "{:0>8}".format(str(job.start_time))
+    end_time = "{:0>8}".format(str(job.end_time))
+    api_url = (f'{API_BASE_URL}/charts/{"radio" if job.market_type.value == 0 else "market"}/songs/{"new/" if job.new else ""}?id='
+                         f'{job.market_id}'
+               f'{"" if job.market_type.value == 0 else f"&market_type={job.market_type.name.lower()}"}&start_dt={job.start_dt}&end_dt={job.end_dt}&min_spins'
+               f'={job.min_spins}&max_spins'
+               f'={job.max_spins}&start_time={start_time}'
+                         f'&end_time={end_time}{'&limit=' + job.limit if job.limit else ''}&user_id={job.user_id}')
+    resp = requests.post(api_url, headers=HEADERS, json=job.days)
     return resp.json()
 
 
@@ -147,9 +145,9 @@ def get_market_name(market_id, market_type):
     return market_name
 
 
-def fit_daypart_details(report):
-    daypart = get_daypart_details(report.daypart_id)
-    report.start_time = daypart['start_time']
-    report.end_time = daypart['end_time']
-    report.days = [int(x) for x in daypart['days'].split(',')]
-    return report, daypart['name']
+def fit_daypart_details(job):
+    daypart = get_daypart_details(job.daypart_id)
+    job.start_time = daypart['start_time']
+    job.end_time = daypart['end_time']
+    job.days = [int(x) for x in daypart['days'].split(',')]
+    return job, daypart['name']

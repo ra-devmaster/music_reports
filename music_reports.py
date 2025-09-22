@@ -13,7 +13,7 @@ load_dotenv()
 hardcoded_job = {'report_id': 1}
 
 # For production, uncomment line below
-hardcoded_job = None
+# hardcoded_job = None
 
 
 def init_job(instance: BackendService, job: dict):
@@ -23,8 +23,8 @@ def init_job(instance: BackendService, job: dict):
     except Exception as ex:
         ex.add_note(f"Failed to create Job from dict, {ex}")
         raise
-    # job_name = f"Syncing file {job.file_path} from workstation {job.workstation}"
-    # instance.set_job_name(job_name)
+    job_name = f"Generating report[{job.report_id}] for user [{job.user_id}] for {job.market_name}"
+    instance.set_job_name(job_name)
     instance.update_job_action('Starting')
     instance.check_stop_processing()
 
@@ -33,25 +33,22 @@ def init_job(instance: BackendService, job: dict):
 
 
 def process_job(instance: BackendService, job: Job):
-    report = get_report_details(job.report_id)
-
     dt_now = datetime.now()
-    report.start_dt = start_of_the_day(dt_now - timedelta(days=7*report.weeks_to_check)).strftime('%Y-%m-%d')
-    job.end_dt = end_of_the_day(dt_now - timedelta(days=1))
-    report.end_dt = job.end_dt.strftime('%Y-%m-%d')
-
+    job.start_dt = start_of_the_day(dt_now - timedelta(days=7*job.weeks_to_check)).strftime('%Y-%m-%d')
+    job.end_dt_date = end_of_the_day(dt_now - timedelta(days=1))
+    job.end_dt = job.end_dt_date.strftime('%Y-%m-%d')
 
     daypart_name = None
 
-    if report.market_type.value == 0 and report.daypart_id:
-        report, daypart_name = fit_daypart_details(report)
+    if job.market_type.value == 0 and job.daypart_id:
+        job, daypart_name = fit_daypart_details(job)
 
-    songs = get_song_list(report)
-
+    instance.log_activity('Getting song list')
+    songs = get_song_list(job)
     song_list = songs['songs']
     song_list = sorted(song_list, key=lambda d: d['spins'], reverse=True)
-
-    if report.market_type.value != 0:
+    instance.log_activity('Formatting song data')
+    if job.market_type.value != 0:
         radio_ids = set(d['first_on'] for d in song_list)
         radio_names = get_radio_names(radio_ids)
         song_list_formatted = []
@@ -87,13 +84,16 @@ def process_job(instance: BackendService, job: Job):
         if set(spins) == {0}:
             song_list_formatted = [{k: v for k, v in d.items() if k not in ['18-6', '6-10', '10-14', '14-18']} for d in song_list_formatted]
 
-    attachments = generate_attachments(report, song_list_formatted, report.start_dt, report.end_dt)
-    email = create_email(report, song_list_formatted, report.start_dt, report.end_dt, daypart_name)
-    email_sent = send_api(report.email_address, email['subject'], email['body'], attachments)
+    instance.log_activity('Generating attachments')
+    attachments = generate_attachments(job, song_list_formatted, job.start_dt, job.end_dt)
+    instance.log_activity('Creating e-mail')
+    email = create_email(job, song_list_formatted, job.start_dt, job.end_dt, daypart_name)
+    instance.log_activity('Sending e-mail')
+    email_sent = send_api(job.email_address, email['subject'], email['body'], attachments)
+    instance.log_activity('Removing files')
     if email_sent:
         for a in attachments:
             os.remove(a)
-    # return False
     return email_sent
 
 
