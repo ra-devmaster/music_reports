@@ -10,10 +10,10 @@ from queries import *
 
 load_dotenv()
 
-hardcoded_job = {'report_id': 1}
+# hardcoded_job = {'report_id': 1}
 
 # For production, uncomment line below
-# hardcoded_job = None
+hardcoded_job = None
 
 
 def init_job(instance: BackendService, job: dict):
