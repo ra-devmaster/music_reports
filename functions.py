@@ -102,7 +102,7 @@ def get_song_list(job):
                f'{"" if job.market_type.value == 0 else f"&market_type={job.market_type.name.lower()}"}&start_dt={job.start_dt}&end_dt={job.end_dt}&min_spins'
                f'={job.min_spins}&max_spins'
                f'={job.max_spins}&start_time={start_time}'
-                         f'&end_time={end_time}{'&limit=' + job.limit if job.limit else ''}&user_id={job.user_id}')
+                         f'&end_time={end_time}{'&limit=' + str(job.limit) if job.limit else ''}&user_id={job.user_id}')
     resp = requests.post(api_url, headers=HEADERS, json=job.days)
     return resp.json()
 
