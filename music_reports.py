@@ -62,8 +62,8 @@ def process_job(instance: BackendService, job: Job):
                 'Title': s['title'],
                 'Release Year': s['release_year'],
                 'Item ID': s['item_id'],
-                'First On': radio_names[s['first_on']],
-                'First PLay': datetime.strptime(s['first_play'], '%Y-%m-%dT%H:%M:%S'),
+                'First On': radio_names[s['first_on']] if s['first_on'] else '',
+                'First PLay': datetime.strptime(s['first_play'], '%Y-%m-%dT%H:%M:%S') if s['first_play'] else '',
                 'Spins': s['spins'],
 
             })
