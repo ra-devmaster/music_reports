@@ -40,7 +40,7 @@ def process_job(instance: BackendService, job: Job):
 
     daypart_name = None
 
-    if job.market_type.value == 0 and job.daypart_id:
+    if job.market_type.value == 0 and job.daypart_id > 0:
         job, daypart_name = fit_daypart_details(job)
 
     instance.log_activity('Getting song list')
