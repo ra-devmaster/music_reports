@@ -74,7 +74,7 @@ def process_job(instance: BackendService, job: Job):
                 'Title': s['title'],
                 'Release Year': s['release_year'],
                 'Item ID': s['item_id'],
-                'First PLay': datetime.strptime(s['first_play'], '%Y-%m-%dT%H:%M:%S'),
+                'First PLay': datetime.strptime(s['first_play'], '%Y-%m-%dT%H:%M:%S') if s['first_play'] else '',
                 'Spins': s['spins'],
                 '18-6':  s['spins_18_6'],
                 '6-10': s['spins_6_10'],
