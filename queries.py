@@ -43,7 +43,8 @@ def get_report_details(report_id: int):
 
 def create_message_queue_entries(conn):
     try:
-        q = ('SELECT report_id FROM radioanalyzer.music_reports AS mp JOIN users AS u USING(user_id) WHERE being_processed != 1 AND (DATE_ADD(last_date_used, INTERVAL frequency '
+        q = ('SELECT report_id FROM radioanalyzer.music_reports AS mp JOIN users AS u USING(user_id) WHERE being_processed IN (1, -1) AND (DATE_ADD(last_date_used, '
+             'INTERVAL frequency '
              'WEEK) < NOW() '
              'OR last_date_used IS Null) AND is_disabled = 0')
         conn.execute(q)

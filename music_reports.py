@@ -10,7 +10,7 @@ from queries import *
 
 load_dotenv()
 
-# hardcoded_job = {'report_id': 1}
+# hardcoded_job = {'report_id': 35}
 
 # For production, uncomment line below
 hardcoded_job = None
@@ -46,6 +46,9 @@ def process_job(instance: BackendService, job: Job):
     instance.log_activity('Getting song list')
     songs = get_song_list(job)
     song_list = songs['songs']
+    if not song_list or len(song_list) <= 0:
+        instance.log_activity('No songs found. Exiting...')
+        return True
     song_list = sorted(song_list, key=lambda d: d['spins'], reverse=True)
     instance.log_activity('Formatting song data')
     if job.market_type.value != 0:
