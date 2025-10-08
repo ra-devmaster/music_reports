@@ -61,7 +61,7 @@ class Job:
             self.min_spins = int(report['min_spins']) if report['min_spins'] else 0
             self.max_spins = int(report['max_spins']) if report['max_spins'] else 0
             self.days = [int(x) for x in report['days'].split(',')] if report['days'] else [0, 1, 2, 3, 4, 5, 6]
-            self.daypart_id = int(report['daypart_id']) if report['daypart_id'] and report['daypart_id'] > -1 else None
+            self.daypart_id = int(report['daypart_id']) if report['daypart_id'] else None
             self.market_name = get_market_name(self.market_id, self.market_type)
 
     def to_flow_message(self):
