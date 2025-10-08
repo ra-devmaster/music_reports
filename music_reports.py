@@ -53,7 +53,8 @@ def process_job(instance: BackendService, job: Job):
     instance.log_activity('Formatting song data')
     if job.market_type.value != 0:
         radio_ids = set(d['first_on'] for d in song_list)
-        radio_ids.remove(None)
+        if None in radio_ids:
+            radio_ids.remove(None)
         radio_names = get_radio_names(radio_ids)
         song_list_formatted = []
         for s in song_list:
