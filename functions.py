@@ -113,8 +113,6 @@ def send_api(email, subject, body, attachments):
     for a in attachments:
         file_name = a.split('/')[-1]
         with open(a, 'rb') as f:
-            if '.html' in a and os.path.getsize(a) > 500000:
-                continue
             b64 = base64.b64encode(f.read()).decode()
             attachments_encoded.append({'content': b64, 'filename':file_name})
 
