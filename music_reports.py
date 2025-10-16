@@ -37,7 +37,7 @@ def process_job(instance: BackendService, job: Job):
     job.start_dt = start_of_the_day(dt_now - timedelta(days=7*job.weeks_to_check)).strftime('%Y-%m-%d')
     job.end_dt_date = end_of_the_day(dt_now - timedelta(days=1))
     job.end_dt = job.end_dt_date.strftime('%Y-%m-%d')
-
+    job.email_address = list(filter(None, job.email_address))
     daypart_name = None
 
     if job.market_type.value == 0 and job.daypart_id > 0:
