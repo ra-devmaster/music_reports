@@ -7,7 +7,6 @@ load_dotenv()
 # Settings for SQL connection
 override_sql_settings({
     2: {'user_name': os.environ['AUTORUN_USERNAME'], 'password': os.environ['AUTORUN_PASSWORD']},
-    3: {'user_name': os.environ['AUTORUN_USERNAME'], 'password': os.environ['AUTORUN_PASSWORD']},
 })
 
 
